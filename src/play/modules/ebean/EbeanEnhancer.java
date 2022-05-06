@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.ClassFileTransformer;
 
-import com.avaje.ebean.Query;
-import com.avaje.ebean.enhance.agent.Transformer;
+import io.ebean.Query;
+import io.ebean.enhance.Transformer;
 import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtMethod;
@@ -16,12 +16,12 @@ import play.classloading.ApplicationClasses.ApplicationClass;
 import play.classloading.enhancers.Enhancer;
 import play.exceptions.UnexpectedException;
 
-import com.avaje.ebean.enhance.agent.ClassBytesReader;
-import com.avaje.ebean.enhance.agent.InputStreamTransform;
+import io.ebean.enhance.common.ClassBytesReader;
+import io.ebean.enhance.common.InputStreamTransform;
 
 public class EbeanEnhancer extends Enhancer
 {
-  static ClassFileTransformer transformer = new Transformer(new PlayClassBytesReader(), "transientInternalFields=true;debug=0", null);
+  static ClassFileTransformer transformer = new Transformer(Play.classloader, "transientInternalFields=true;debug=1");
 
   @Override
   public void enhanceThisClass(ApplicationClass applicationClass) throws Exception
@@ -32,7 +32,7 @@ public class EbeanEnhancer extends Enhancer
 
     CtClass ctClass = makeClass(applicationClass);
  
-    if (!ctClass.subtypeOf(classPool.get(EbeanSupport.class.getName()))) {
+    if (!ctClass.subtypeOf(classPool.get(EbeanSupport.class.getCanonicalName()))) {
       // We don't want play style enhancements to happen to classes other than subclasses of EbeanSupport
       return;
     }
@@ -75,8 +75,10 @@ public class EbeanEnhancer extends Enhancer
     // findById
     ctClass.addMethod(CtMethod.make("public static play.modules.ebean.EbeanSupport findById(Object id) { return (" + entityName + ") ebean().find(" + entityName + ".class, id); }", ctClass));
 
+    // findOne
+    ctClass.addMethod(CtMethod.make("public static play.modules.ebean.EbeanSupport findOne(String query, Object[] params) { return (" + entityName + ") createQuery(" + entityName + ".class,query,params).findOne(); }", ctClass));
     // findUnique
-    ctClass.addMethod(CtMethod.make("public static play.modules.ebean.EbeanSupport findUnique(String query, Object[] params) { return (" + entityName + ") createQuery(" + entityName + ".class,query,params).findUnique(); }", ctClass));
+    ctClass.addMethod(CtMethod.make("public static play.modules.ebean.EbeanSupport findUnique(String query, Object[] params) { return (" + entityName + ") createQuery(" + entityName + ".class,query,params).findOne(); }", ctClass));
 
     // find
     ctClass.addMethod(CtMethod.make("public static " + Query.class.getCanonicalName() + " find(String query, Object[] params) { return createQuery(" + entityName + ".class,query,params); }", ctClass));

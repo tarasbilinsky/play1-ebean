@@ -20,7 +20,7 @@ import javax.persistence.MappedSuperclass;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 
-import com.avaje.ebean.Expression;
+import io.ebean.Expression;
 import play.Play;
 import play.PlayPlugin;
 import play.data.binding.BeanWrapper;
@@ -30,13 +30,13 @@ import play.db.Model;
 import play.exceptions.UnexpectedException;
 import play.mvc.Scope.Params;
 
-import com.avaje.ebean.EbeanServer;
-import com.avaje.ebean.Query;
-import com.avaje.ebean.Update;
+import io.ebean.EbeanServer;
+import io.ebean.Query;
+import io.ebean.Update;
 
 @SuppressWarnings("unchecked")
 @MappedSuperclass
-public class EbeanSupport implements play.db.Model
+public class EbeanSupport<T> implements play.db.Model, Query<T>
 {
 
   public static <T extends EbeanSupport> T create(Class<?> type, String name, Map<String, String[]> params, Annotation[] annotations)
@@ -185,7 +185,7 @@ public class EbeanSupport implements play.db.Model
     throw enhancementError();
   }
 
-  public static <T extends EbeanSupport> T findUnique(String query,Object... params)
+  public static <T extends EbeanSupport> T findOne(String query,Object... params)
   {
     throw enhancementError();
   }

@@ -1,6 +1,6 @@
 package play.modules.ebean;
 
-import com.avaje.ebean.event.BeanPostLoad;
+import io.ebean.event.BeanPostLoad;
 
 public class EbeanPostLoader implements BeanPostLoad
 {

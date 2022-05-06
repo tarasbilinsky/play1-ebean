@@ -36,11 +36,11 @@ import play.exceptions.UnexpectedException;
 import play.mvc.Http;
 import play.mvc.Http.Request;
 
-import com.avaje.ebean.EbeanServer;
-import com.avaje.ebean.EbeanServerFactory;
-import com.avaje.ebean.Query;
-import com.avaje.ebean.Update;
-import com.avaje.ebean.config.ServerConfig;
+import io.ebean.EbeanServer;
+import io.ebean.EbeanServerFactory;
+import io.ebean.Query;
+import io.ebean.Update;
+import io.ebean.config.ServerConfig;
 
 public class EbeanPlugin extends PlayPlugin
 {

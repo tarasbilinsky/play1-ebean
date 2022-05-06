@@ -2,8 +2,8 @@ package play.modules.ebean;
 
 import java.util.Set;
 
-import com.avaje.ebean.event.BeanPersistAdapter;
-import com.avaje.ebean.event.BeanPersistRequest;
+import io.ebean.event.BeanPersistAdapter;
+import io.ebean.event.BeanPersistRequest;
 
 public class EbeanModelAdapter extends BeanPersistAdapter
 {

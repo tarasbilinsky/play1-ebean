@@ -59,6 +59,7 @@ public class EbeanPlugin extends PlayPlugin
     cfg.setRegister("default".equals(name));
     cfg.setDefaultServer("default".equals(name));
     cfg.add(new EbeanModelAdapter());
+    cfg.add(new EbeanPostLoader());
     try {
       result = EbeanServerFactory.create(cfg);
     } catch (Throwable t) {
@@ -243,6 +244,25 @@ public class EbeanPlugin extends PlayPlugin
       }
     }
 
+    /**
+     * Retrieve a list of result
+     *
+     * @param offset
+     *            position of the first result, numbered from 0
+     * @param size
+     *            maximum number of results to retrieve (page length)
+     * @param orderBy
+     *            Order by field
+     * @param order
+     *            Sorting order: ASC, DESC
+     * @param searchFields
+     *
+     * @param keywords
+     *
+     * @param where
+     *
+     * @return a list of results
+     */
     @SuppressWarnings("unchecked")
     public List<Model> fetch(int offset, int size, String orderBy, String order, List<String> searchFields, String keywords, String where)
     {
@@ -257,12 +277,10 @@ public class EbeanPlugin extends PlayPlugin
           filter = (filter != null ? "(" + filter + ") and " : "") + "(" + searchQuery + ")";
         }
       }
-
-      if (filter != null) { 
-        q.where(filter);
+      if (filter != null) {
+        q.where().raw(filter);
         if (filter.indexOf(":keywords") != -1)  q.setParameter("keywords",  "%" + keywords.toLowerCase() + "%");
       }
-
       if (orderBy == null && order == null) {
         orderBy = "id";
         order = "ASC";
@@ -292,11 +310,12 @@ public class EbeanPlugin extends PlayPlugin
         }
       }
       if (filter != null) { 
-        q.where(filter);
+        q.where().raw(filter);
         if (filter.indexOf(":keywords") != -1)  q.setParameter("keywords", "%" + keywords.toLowerCase() + "%");
       }
 
-      return Long.valueOf(q.findRowCount());
+      // findRowCoumt() was removed in Ebean 8.4.1, use findCount()
+      return Long.valueOf(q.findCount());
     }
 
     public void deleteAll()

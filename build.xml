@@ -1,20 +1,25 @@
 <project name="JAR File Builder" default="dist" basedir=".">
 
-	<property name="play.version" value="1.2.4" />
-	<property name="ebean.version" value="2.7.4" />
-	<property name="version" value="1.0.7RC1" />
-	<property name="play.home" value="/usr/local/play-${play.version}" />
+	<property environment="env"/>
+	<property name="play.path" value="${env.PLAY_PATH}"/>
+	<property name="play.version" value="1.4.6" />
+	<property name="ebean.version" value="9.5.1" />
+	<property name="pluginVersion" value="1.0.7RC1" />
+	<condition property="play.home" value="${play.path}" else="/usr/local/play-${play.version}">
+		<isset property="play.path"/>
+	</condition>
+	<import file="${play.home}/resources/application-build.xml"/>
 
-	<taskdef name="ebeanEnhance" classname="com.avaje.ebean.enhance.ant.AntEnhanceTask" classpath="${basedir}/lib/ebean-${ebean.version}-agent.jar" />
+	<taskdef name="ebeanEnhance" classname="com.avaje.ebean.enhance.ant.AntEnhanceTask" classpath="${basedir}/lib/ebean-agent-2.7.4.jar" />
 
 	<target name="dist" depends="clean,compile">
-		<jar jarfile="${basedir}/lib/play-ebean-${version}.jar" basedir="${basedir}/tmp" />
-		<echo file="${basedir}/tmp/manifest" message="version=${version}${line.separator}frameworkVersions=1.2" />
+		<jar jarfile="${basedir}/lib/play-ebean-${pluginVersion}.jar" basedir="${basedir}/tmp" />
+		<echo file="${basedir}/tmp/manifest" message="version=${pluginVersion}${line.separator}frameworkVersions=1.4.6" />
 		<mkdir dir="${basedir}/dist" />
-		<zip destfile="${basedir}/dist/ebean-${version}.zip">
+		<zip destfile="${basedir}/dist/ebean-${pluginVersion}.zip">
 			<fileset dir="${basedir}">
 				<include name="lib/ebean-${ebean.version}.jar" />
-				<include name="lib/play-ebean-${version}.jar" />
+				<include name="lib/play-ebean-${pluginVersion}.jar" />
 				<include name="src/**" />
 				<include name="documentation/**" />
 				<include name="sample/**" />
@@ -32,11 +37,14 @@
 	</target>
 
 	<target name="compile">
+		<replaceregexp file="conf/dependencies.yml" preserveLastModified="true" byline="true"
+					   match="(self: play -> ebean.*) (.+)"
+					   replace="\1 ${pluginVersion}"/>
 		<mkdir dir="${basedir}/tmp" />
 		<javac srcdir="${basedir}/src" destdir="${basedir}/tmp" debug="yes">
 			<classpath>
 				<fileset dir="lib">
-					<include name="ebean-${ebean.version}.jar" />
+					<include name="*.jar" />
 				</fileset>
 				<fileset dir="${play.home}/framework">
 					<include name="**/*.jar" />
@@ -48,7 +56,7 @@
 				<exclude name="**/*.java" />
 			</fileset>
 		</copy>
-		<ebeanEnhance classpath="${play.home}/framework/play-${play.version}.jar" classSource="${basedir}/tmp" packages="play/modules/ebean" transformArgs="transientInternalFields=true;debug=1" />
+		<ebeanEnhance classpath="${play.home}/framework/play-${play.version}.jar" classSource="${basedir}/tmp" packages="play.modules.ebean" transformArgs="transientInternalFields=true;debug=10" />
 	</target>
 
 </project>

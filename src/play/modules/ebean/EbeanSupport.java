@@ -20,6 +20,7 @@ import javax.persistence.MappedSuperclass;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 
+import com.avaje.ebean.Expression;
 import play.Play;
 import play.PlayPlugin;
 import play.data.binding.BeanWrapper;
@@ -209,15 +210,22 @@ public class EbeanSupport implements play.db.Model
     throw enhancementError();
   }
 
+  /**
+   * Deprecated since 1.0.7, have a look at {@link #createQuery(Class, com.avaje.ebean.Expression)}
+   * Ebean 7.13.1 removed {@link com.avaje.ebean.Query#where(String)}
+   */
+  @Deprecated
   protected static <T extends EbeanSupport> Query<T> createQuery(Class<T> beanType, String where, Object[] params)
   {
     Query<T> q = ebean().createQuery(beanType);
     if (where != null) {
-      q.where(where);
-      for (int i = 0; i < params.length; i++)
-        q.setParameter(i + 1, params[i]);
+      q.where().raw(where, params);
     }
     return q;
+  }
+
+  protected static <T extends EbeanSupport> Query<T> createQuery(Class<T> beanType, Expression expression) {
+    return ebean().createQuery(beanType).where(expression);
   }
 
   protected static <T extends EbeanSupport> Update<T> createDeleteQuery(Class<T> beanType, String where, Object[] params)

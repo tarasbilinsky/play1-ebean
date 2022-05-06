@@ -15,12 +15,6 @@ public class EbeanModelAdapter extends BeanPersistAdapter
   }
 
   @Override
-  public void postLoad(Object bean, Set<String> includedProperties)
-  {
-    ((EbeanSupport) bean).afterLoad();
-  }
-
-  @Override
   public boolean preInsert(BeanPersistRequest<?> request)
   {
     ((EbeanSupport) request.getBean()).beforeSave(true);

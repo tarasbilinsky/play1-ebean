@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.ClassFileTransformer;
 
+import com.avaje.ebean.Query;
+import com.avaje.ebean.enhance.agent.Transformer;
 import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtMethod;
@@ -19,9 +21,9 @@ import com.avaje.ebean.enhance.agent.InputStreamTransform;
 
 public class EbeanEnhancer extends Enhancer
 {
-  static ClassFileTransformer transformer = new PlayAwareTransformer(new PlayClassBytesReader(), "transientInternalFields=true;debug=0");
+  static ClassFileTransformer transformer = new Transformer(new PlayClassBytesReader(), "transientInternalFields=true;debug=0", null);
 
-  
+  @Override
   public void enhanceThisClass(ApplicationClass applicationClass) throws Exception
   {
     // Ebean transformations
@@ -30,7 +32,7 @@ public class EbeanEnhancer extends Enhancer
 
     CtClass ctClass = makeClass(applicationClass);
  
-    if (!ctClass.subtypeOf(classPool.get("play.modules.ebean.EbeanSupport"))) {
+    if (!ctClass.subtypeOf(classPool.get(EbeanSupport.class.getName()))) {
       // We don't want play style enhancements to happen to classes other than subclasses of EbeanSupport
       return;
     }
@@ -64,8 +66,8 @@ public class EbeanEnhancer extends Enhancer
     ctClass.addMethod(CtMethod.make("public static play.modules.ebean.EbeanSupport create(String name, play.mvc.Scope.Params params) { return create(" + entityName + ".class,name, params.all(), null); }",ctClass));
 
     // count
-    ctClass.addMethod(CtMethod.make("public static long count() { return (long) ebean().createQuery(" + entityName + ".class).findRowCount(); }", ctClass));
-    ctClass.addMethod(CtMethod.make("public static long count(String query, Object[] params) { return (long) createQuery(" + entityName + ".class,query,params).findRowCount(); }", ctClass));
+    ctClass.addMethod(CtMethod.make("public static long count() { return (long) ebean().createQuery(" + entityName + ".class).findCount(); }", ctClass));
+    ctClass.addMethod(CtMethod.make("public static long count(String query, Object[] params) { return (long) createQuery(" + entityName + ".class,query,params).findCount(); }", ctClass));
 
     // findAll
     ctClass.addMethod(CtMethod.make("public static java.util.List findAll() { return ebean().createQuery(" + entityName + ".class).findList(); }", ctClass));
@@ -77,10 +79,10 @@ public class EbeanEnhancer extends Enhancer
     ctClass.addMethod(CtMethod.make("public static play.modules.ebean.EbeanSupport findUnique(String query, Object[] params) { return (" + entityName + ") createQuery(" + entityName + ".class,query,params).findUnique(); }", ctClass));
 
     // find
-    ctClass.addMethod(CtMethod.make("public static com.avaje.ebean.Query find(String query, Object[] params) { return createQuery(" + entityName + ".class,query,params); }", ctClass));
+    ctClass.addMethod(CtMethod.make("public static " + Query.class.getCanonicalName() + " find(String query, Object[] params) { return createQuery(" + entityName + ".class,query,params); }", ctClass));
 
     // all
-    ctClass.addMethod(CtMethod.make("public static com.avaje.ebean.Query all() { return ebean().createQuery(" + entityName + ".class); }", ctClass));
+    ctClass.addMethod(CtMethod.make("public static " + Query.class.getCanonicalName() + " all() { return ebean().createQuery(" + entityName + ".class); }", ctClass));
 
     // delete
     ctClass.addMethod(CtMethod.make("public static int delete(String query, Object[] params) { return createDeleteQuery(" + entityName + ".class,query,params).execute(); }", ctClass));

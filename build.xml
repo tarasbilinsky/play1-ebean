@@ -1,25 +1,26 @@
-<project name="JAR File Builder" default="dist" basedir=".">
+<?xml version="1.0" encoding="UTF-8"?>
 
-	<property environment="env"/>
-	<property name="play.path" value="${env.PLAY_PATH}"/>
-	<property name="play.version" value="1.4.6" />
+<project name="ebean" default="build" basedir=".">
+
 	<property name="ebean.version" value="2.7.4" />
 	<property name="ebean.agent.version" value="2.7.4" />
-	<property name="pluginVersion" value="1.0.7RC1" />
-	<property name="play.home" value="${play.path}"/>
-	<import file="${play.home}/resources/application-build.xml"/>
+	<property name="module.version" value="1.0.7RC1" />
+
+	<target name="check" unless="play.path">
+		<fail message="Please specify Play framework path using -Dplay.path=/path/to/framework/home" />
+	</target>
 
 	<taskdef name="ebeanEnhance" classname="com.avaje.ebean.enhance.ant.AntEnhanceTask" classpath="${basedir}/lib/ebean-agent-${ebean.agent.version}.jar" />
+	<!--<import file="${play.path}/resources/application-build.xml"/>-->
 
-	<target name="dist" depends="clean,compile">
-		<jar jarfile="${basedir}/lib/play-ebean-${pluginVersion}.jar" basedir="${basedir}/tmp" />
-		<echo file="${basedir}/tmp/manifest" message="version=${pluginVersion}${line.separator}frameworkVersions=${play.version}" />
+	<target name="dist" depends="clean,build">
+		<echo file="${basedir}/tmp/manifest" message="version=${module.version}${line.separator}frameworkVersions=${play.version}" />
 		<mkdir dir="${basedir}/dist" />
-		<zip destfile="${basedir}/dist/ebean-${pluginVersion}.zip">
+		<zip destfile="${basedir}/dist/ebean-${module.version}.zip">
 			<fileset dir="${basedir}">
 				<include name="lib/ebean-${ebean.version}.jar" />
 				<include name="lib/ebean-agent-${ebean.agent.version}.jar" />
-				<include name="lib/play-ebean-${pluginVersion}.jar" />
+				<include name="lib/play-ebean-${module.version}.jar" />
 				<include name="src/**" />
 				<include name="documentation/**" />
 				<include name="sample/**" />
@@ -36,27 +37,58 @@
 		<delete dir="${basedir}/dist" />
 	</target>
 
-	<target name="compile">
+	<path id="project.classpath">
+		<pathelement path="${play.path}/framework/classes"/>
+		<fileset dir="${play.path}/framework/lib">
+			<include name="*.jar"/>
+		</fileset>
+		<fileset dir="${play.path}/framework">
+			<include name="*.jar"/>
+		</fileset>
+		<fileset dir="lib">
+			<include name="*.jar"/>
+		</fileset>
+	</path>
+
+	<target name="build" depends="compile">
 		<replaceregexp file="conf/dependencies.yml" preserveLastModified="true" byline="true"
-					   match="(self: play -> ebean.*) (.+)"
-					   replace="\1 ${pluginVersion}"/>
-		<mkdir dir="${basedir}/tmp" />
-		<javac srcdir="${basedir}/src" destdir="${basedir}/tmp" debug="yes">
-			<classpath>
-				<fileset dir="lib">
-					<include name="*.jar" />
-				</fileset>
-				<fileset dir="${play.home}/framework">
-					<include name="**/*.jar" />
-				</fileset>
-			</classpath>
-		</javac>
-		<copy todir="${basedir}/tmp">
-			<fileset dir="${basedir}/src">
-				<exclude name="**/*.java" />
+			match="(self: play -> ebean.*) (.+)"
+			replace="\1 ${module.version}"/>
+		<mkdir dir="lib" />
+		<copy todir="tmp/classes">
+			<fileset dir="src">
+				<include name="**/*.properties"/>
+				<include name="**/*.xml"/>
+				<include name="**/play.plugins"/>
+				<include name="**/play.static"/>
 			</fileset>
 		</copy>
-		<ebeanEnhance classpath="${play.home}/framework/play-${play.version}.jar" classSource="${basedir}/tmp" packages="play.modules.ebean" transformArgs="transientInternalFields=true;debug=10" />
+		<pathconvert property="project.classpath.as.path" refid="project.classpath"/>
+		<echo message="${project.classpath.as.path}" file="tmp/classpath.replace.txt" />
+		<loadfile property="project.classpath.for.ebeanEnhance" srcFile="tmp/classpath.replace.txt">
+			<filterchain>
+				<tokenfilter>
+					<replaceregex pattern=":" replace=";" flags="g"/>
+				</tokenfilter>
+			</filterchain>
+		</loadfile>
+		<!--<echo>Classpath is ${project.classpath.for.ebeanEnhance}</echo>-->
+		<ebeanEnhance classpath="${project.classpath.for.ebeanEnhance}" classSource="tmp/classes" packages="play.modules.ebean" transformArgs="transientInternalFields=true;debug=10" />
+		<jar destfile="lib/play-ebean-${module.version}.jar" basedir="tmp/classes">
+			<manifest>
+				<section name="Play-module">
+					<attribute name="Specification-Title" value="ebean"/>
+				</section>
+			</manifest>
+		</jar>
+		<delete dir="tmp" />
+	</target>
+
+	<target name="compile" depends="check">
+		<mkdir dir="tmp/classes" />
+		<javac srcdir="src" destdir="tmp/classes" source="8" target="8" debug="true">
+			<classpath refid="project.classpath" />
+		</javac>
 	</target>
 
 </project>

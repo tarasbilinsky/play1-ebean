@@ -30,13 +30,13 @@ import play.db.Model;
 import play.exceptions.UnexpectedException;
 import play.mvc.Scope.Params;
 
-import io.ebean.EbeanServer;
+import io.ebean.Database;
 import io.ebean.Query;
 import io.ebean.Update;
 
 @SuppressWarnings("unchecked")
 @MappedSuperclass
-public class EbeanSupport<T> implements play.db.Model, Query<T>
+public class EbeanSupport<T> implements play.db.Model
 {
 
   public static <T extends EbeanSupport> T create(Class<?> type, String name, Map<String, String[]> params, Annotation[] annotations)
@@ -211,8 +211,7 @@ public class EbeanSupport<T> implements play.db.Model, Query<T>
   }
 
   /**
-   * Deprecated since 1.0.7, have a look at {@link #createQuery(Class, com.avaje.ebean.Expression)}
-   * Ebean 7.13.1 removed {@link com.avaje.ebean.Query#where(String)}
+   * Deprecated since 1.0.7, have a look at {@link #createQuery(Class, io.ebean.Expression)}
    */
   @Deprecated
   protected static <T extends EbeanSupport> Query<T> createQuery(Class<T> beanType, String where, Object[] params)
@@ -252,7 +251,7 @@ public class EbeanSupport<T> implements play.db.Model, Query<T>
   {
   }
 
-  protected static EbeanServer ebean()
+  protected static Database ebean()
   {
     return EbeanContext.server();
   }

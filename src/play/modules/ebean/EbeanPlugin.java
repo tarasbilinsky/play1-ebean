@@ -22,6 +22,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.sql.DataSource;
+import javax.xml.crypto.Data;
 
 import play.Logger;
 import play.Play;
@@ -36,22 +37,22 @@ import play.exceptions.UnexpectedException;
 import play.mvc.Http;
 import play.mvc.Http.Request;
 
-import io.ebean.EbeanServer;
-import io.ebean.EbeanServerFactory;
+import io.ebean.Database;
+import io.ebean.DatabaseFactory;
 import io.ebean.Query;
 import io.ebean.Update;
-import io.ebean.config.ServerConfig;
+import io.ebean.config.DatabaseConfig;
 
 public class EbeanPlugin extends PlayPlugin
 {
-  private static EbeanServer              defaultServer;
-  private static Map<String, EbeanServer> SERVERS = new HashMap<String,EbeanServer>();
+  private static Database              defaultServer;
+  private static Map<String, Database> SERVERS = new HashMap<String,Database>();
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
-  private static EbeanServer createServer(String name, DataSource dataSource)
+  private static Database createServer(String name, DataSource dataSource)
   {
-    EbeanServer result = null;
-    ServerConfig cfg = new ServerConfig();
+    Database result = null;
+    DatabaseConfig cfg = new DatabaseConfig();
     cfg.loadFromProperties();
     cfg.setName(name);
     cfg.setClasses((List) Play.classloader.getAllClasses());
@@ -61,16 +62,16 @@ public class EbeanPlugin extends PlayPlugin
     cfg.add(new EbeanModelAdapter());
     cfg.add(new EbeanPostLoader());
     try {
-      result = EbeanServerFactory.create(cfg);
+      result = DatabaseFactory.create(cfg);
     } catch (Throwable t) {
       Logger.error("Failed to create ebean server (%s)", t.getMessage());
     }
     return result;
   }
 
-  protected static EbeanServer checkServer(String name, DataSource ds)
+  protected static Database checkServer(String name, DataSource ds)
   {
-    EbeanServer server = null;
+    Database server = null;
     if (name != null) {
       synchronized (SERVERS) {
         server = SERVERS.get(name);
@@ -118,7 +119,7 @@ public class EbeanPlugin extends PlayPlugin
   @SuppressWarnings("unchecked")
   public void beforeInvocation()
   {
-    EbeanServer server = defaultServer;
+    Database server = defaultServer;
 
     Request currentRequest = Http.Request.current();
     if (currentRequest != null) {
@@ -136,14 +137,14 @@ public class EbeanPlugin extends PlayPlugin
   @Override
   public void afterInvocation()
   {
-    EbeanServer ebean = EbeanContext.server();
-    if (ebean != null && ebean.currentTransaction() != null) ebean.commitTransaction();
+    Database ebean = EbeanContext.server();
+    if (ebean != null && ebean.currentTransaction() != null) ebean.currentTransaction().commit();
   }
 
   @Override
   public void invocationFinally()
   {
-    EbeanServer ebean = null;
+    Database ebean = null;
     try {
       ebean = EbeanContext.server();
     } catch(IllegalStateException e) {

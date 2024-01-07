@@ -13,7 +13,7 @@ public class EbeanPostLoader implements BeanPostLoad
 
     /**
      * Since 1.0.7
-     * Ebean 6.3.1 moved <code>BeanPersistController.postLoad()</code> to {@link com.avaje.ebean.event.BeanPostLoad} interface
+     * Ebean 6.3.1 moved <code>BeanPersistController.postLoad()</code> to {@link io.ebean.event.BeanPostLoad} interface
      * @param bean
      */
     @Override

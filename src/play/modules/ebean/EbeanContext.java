@@ -5,23 +5,23 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
-import io.ebean.EbeanServer;
+import io.ebean.Database;
 
 public class EbeanContext
 {
   public static ThreadLocal<EbeanContext> local      = new ThreadLocal<EbeanContext>();
 
-  private EbeanServer                     server;
+  private Database                     server;
   private Map<String, Object>             properties = new HashMap<String, Object>();
 
-  private EbeanContext(EbeanServer server, Object... props)
+  private EbeanContext(Database server, Object... props)
   {
     this.server = server;
     for (int i = 0; i < props.length - 1; i += 2)
       properties.put(props[i].toString(), props[i + 1]);
   }
 
-  public static EbeanContext set(EbeanServer server, Object... properties)
+  public static EbeanContext set(Database server, Object... properties)
   {
     EbeanContext ctx = local.get();
     if (ctx != null && ctx.server != null && ctx.server.currentTransaction() != null) {
@@ -46,7 +46,7 @@ public class EbeanContext
     return result;
   }
 
-  public static EbeanServer server()
+  public static Database server()
   {
     return get().server;
   }

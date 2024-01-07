@@ -17,27 +17,27 @@ public class EbeanModelAdapter extends BeanPersistAdapter
   @Override
   public boolean preInsert(BeanPersistRequest<?> request)
   {
-    ((EbeanSupport) request.getBean()).beforeSave(true);
+    ((EbeanSupport) request.bean()).beforeSave(true);
     return true;
   }
 
   @Override
   public boolean preUpdate(BeanPersistRequest<?> request)
   {
-    ((EbeanSupport) request.getBean()).beforeSave(false);
+    ((EbeanSupport) request.bean()).beforeSave(false);
     return true;
   }
 
   @Override
   public void postInsert(BeanPersistRequest<?> request)
   {
-    ((EbeanSupport) request.getBean()).afterSave(true);
+    ((EbeanSupport) request.bean()).afterSave(true);
   }
 
   @Override
   public void postUpdate(BeanPersistRequest<?> request)
   {
-    ((EbeanSupport) request.getBean()).afterSave(false);
+    ((EbeanSupport) request.bean()).afterSave(false);
   }
   
   

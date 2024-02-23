@@ -14,11 +14,11 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
-import javax.persistence.MappedSuperclass;
-import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 
 import io.ebean.Expression;
 import play.Play;
@@ -142,10 +142,9 @@ public class EbeanSupport<T> implements play.db.Model
     return false;
   }
 
-  public <T extends EbeanSupport> T save()
+  public void save()
   {
     _save();
-    return (T) this;
   }
 
   public <T extends EbeanSupport> T refresh()
@@ -154,10 +153,10 @@ public class EbeanSupport<T> implements play.db.Model
     return (T) this;
   }
 
-  public <T extends EbeanSupport> T delete()
+  public boolean delete()
   {
     _delete();
-    return (T) this;
+    return true;
   }
 
   public static <T extends EbeanSupport> T create(String name, Params params)

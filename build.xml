@@ -2,7 +2,7 @@
 
 	<property name="play.home" value="/Users/taras/Projects/HEA/hea-one/code/libraries/play-1-7/" />
 	<property name="play.version" value="1.7.x-1.7.1-74-gf832ef82" />
-	<property name="version" value="11.1" />
+	<property name="version" value="11.2" />
 
 	<taskdef name="ebeanEnhance" classname="io.ebean.enhance.ant.AntEnhanceTask" classpath="${basedir}/lib/io.ebean.ebean-agent-13.17.3.jar" />
 

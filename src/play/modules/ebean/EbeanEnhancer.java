@@ -38,7 +38,7 @@ public class EbeanEnhancer extends Enhancer
     }
 
     // Enhance only JPA entities
-    if (!hasAnnotation(ctClass, "javax.persistence.Entity")) {
+    if (!hasAnnotation(ctClass, "jakartax.persistence.Entity")) {
       return;
     }
 

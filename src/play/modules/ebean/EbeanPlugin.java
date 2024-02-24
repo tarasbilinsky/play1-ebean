@@ -48,6 +48,9 @@ public class EbeanPlugin extends PlayPlugin
   private static Database              defaultServer;
   private static Map<String, Database> SERVERS = new HashMap<String,Database>();
 
+  private static String allStackTrace(Throwable t) {
+    return Arrays.stream(t.getStackTrace()).map(x -> x.toString()).reduce((a, b) -> a + "\n" + b).get().toString();
+  }
   @SuppressWarnings({ "unchecked", "rawtypes" })
   private static Database createServer(String name, DataSource dataSource)
   {
@@ -59,12 +62,18 @@ public class EbeanPlugin extends PlayPlugin
     cfg.setDataSource(new EbeanDataSourceWrapper(dataSource));
     cfg.setRegister("default".equals(name));
     cfg.setDefaultServer("default".equals(name));
-    cfg.add(new EbeanModelAdapter());
-    cfg.add(new EbeanPostLoader());
     try {
       result = DatabaseFactory.create(cfg);
     } catch (Throwable t) {
-      Logger.error("Failed to create ebean server (%s)", t.getMessage());
+      StringBuilder b = new StringBuilder();
+      Throwable tt = t;
+      while (tt != null) {
+        b.append("\n\n\n");
+        b.append(allStackTrace(tt));
+        tt = tt.getCause();
+      }
+
+      Logger.error("Failed to create ebean server (%s) %s ", t.getMessage(), b.toString());
     }
     return result;
   }
@@ -161,321 +170,6 @@ public class EbeanPlugin extends PlayPlugin
       EbeanEnhancer.class.newInstance().enhanceThisClass(applicationClass);
     } catch (Throwable t) {
       Logger.error(t, "EbeanPlugin enhancement error");
-    }
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public Model.Factory modelFactory(Class<? extends Model> modelClass)
-  {
-    if (EbeanSupport.class.isAssignableFrom(modelClass) && modelClass.isAnnotationPresent(Entity.class)) {
-      return new EbeanModelLoader((Class<EbeanSupport>) modelClass);
-    }
-    return null;
-  }
-
-  @SuppressWarnings({ "rawtypes", "unchecked" })
-  @Override
-  public Object bind(String name, Class clazz, java.lang.reflect.Type type, Annotation[] annotations, Map<String, String[]> params)
-  {
-    if (EbeanSupport.class.isAssignableFrom(clazz)) {
-      String keyName = Model.Manager.factoryFor(clazz).keyName();
-      String idKey = name + "." + keyName;
-      if (params.containsKey(idKey) && params.get(idKey).length > 0 && params.get(idKey)[0] != null && params.get(idKey)[0].trim().length() > 0) {
-        String id = params.get(idKey)[0];
-        Object o;
-        try {
-          o = EbeanContext.server().find(clazz, play.data.binding.Binder.directBind(name, annotations, id, Model.Manager.factoryFor(clazz).keyType()));
-        } catch (Exception e) {
-          throw new UnexpectedException(e);
-        }
-        return EbeanSupport.edit(o, name, params, annotations);
-      }
-      return EbeanSupport.create(clazz, name, params, annotations);
-    }
-    return super.bind(name, clazz, type, annotations, params);
-  }
-
-  @Override
-  public Object bind(String name, Object o, Map<String, String[]> params)
-  {
-    if (o instanceof EbeanSupport) {
-      return EbeanSupport.edit(o, name, params, null);
-    }
-    return null;
-  }
-  
-  public static class EbeanModelLoader implements Model.Factory
-  {
-
-    private Class<? extends EbeanSupport> modelClass;
-
-    public EbeanModelLoader(Class<EbeanSupport> modelClass)
-    {
-      this.modelClass = modelClass;
-    }
-
-    public String keyName()
-    {
-      return keyField().getName();
-    }
-
-    public Class<?> keyType()
-    {
-      return keyField().getType();
-    }
-
-    public Object keyValue(Model m)
-    {
-      try {
-        return keyField().get(m);
-      } catch (Exception ex) {
-        throw new UnexpectedException(ex);
-      }
-    }
-
-    public Model findById(Object id)
-    {
-      if (id == null) return null;
-
-      try {
-        return EbeanContext.server().find(modelClass, Binder.directBind(id.toString(), this.keyType()));
-      } catch (Exception e) {
-        return null;
-      }
-    }
-
-    /**
-     * Retrieve a list of result
-     *
-     * @param offset
-     *            position of the first result, numbered from 0
-     * @param size
-     *            maximum number of results to retrieve (page length)
-     * @param orderBy
-     *            Order by field
-     * @param order
-     *            Sorting order: ASC, DESC
-     * @param searchFields
-     *
-     * @param keywords
-     *
-     * @param where
-     *
-     * @return a list of results
-     */
-    @SuppressWarnings("unchecked")
-    public List<Model> fetch(int offset, int size, String orderBy, String order, List<String> searchFields, String keywords, String where)
-    {
-      Query<?> q = EbeanContext.server().createQuery(modelClass);
-      String filter = null;
-      if (where != null && !where.trim().equals("")) {
-        filter = where.trim();
-      }
-      if (keywords != null && !keywords.equals("")) {
-        String searchQuery = getSearchQuery(searchFields);
-        if (!searchQuery.equals("")) {
-          filter = (filter != null ? "(" + filter + ") and " : "") + "(" + searchQuery + ")";
-        }
-      }
-      if (filter != null) {
-        q.where().raw(filter);
-        if (filter.indexOf(":keywords") != -1)  q.setParameter("keywords",  "%" + keywords.toLowerCase() + "%");
-      }
-      if (orderBy == null && order == null) {
-        orderBy = "id";
-        order = "ASC";
-      }
-      if (orderBy == null && order != null) {
-        orderBy = "id";
-      }
-      if (order == null || (!order.equals("ASC") && !order.equals("DESC"))) {
-        order = "ASC";
-      }
-      q.orderBy(orderBy + " " + order);
-      q.setFirstRow(offset).setMaxRows(size);
-      return (List<Model>) q.findList();
-    }
-
-    public Long count(List<String> searchFields, String keywords, String where)
-    {
-      Query<?> q = EbeanContext.server().createQuery(modelClass);
-      String filter = null;
-      if (where != null && !where.trim().equals("")) {
-        filter = where.trim();
-      }
-      if (keywords != null && !keywords.equals("")) {
-        String searchQuery = getSearchQuery(searchFields);
-        if (!searchQuery.equals("")) {
-          filter = (filter != null ? "(" + filter + ") and " : "") + "(" + searchQuery + ")";
-        }
-      }
-      if (filter != null) { 
-        q.where().raw(filter);
-        if (filter.indexOf(":keywords") != -1)  q.setParameter("keywords", "%" + keywords.toLowerCase() + "%");
-      }
-
-      // findRowCoumt() was removed in Ebean 8.4.1, use findCount()
-      return Long.valueOf(q.findCount());
-    }
-
-    public void deleteAll()
-    {
-      String query = "delete from " + modelClass.getSimpleName();
-      Update<?> deleteAll = EbeanContext.server().createUpdate(modelClass, query);
-      deleteAll.execute();
-    }
-
-    public List<Property> listProperties()
-    {
-      return listProperties(true);
-    }
-
-    private List<Property> listProperties(boolean includeTransient)
-    {
-      List<Model.Property> properties = new ArrayList<Model.Property>();
-      Set<Field> fields = new HashSet<Field>();
-      Class<?> tclazz = modelClass;
-      while (!tclazz.equals(Object.class)) {
-        Collections.addAll(fields, tclazz.getDeclaredFields());
-        tclazz = tclazz.getSuperclass();
-      }
-      for (Field f : fields) {
-        if (Modifier.isStatic(f.getModifiers()) || f.getName().toLowerCase().startsWith("_ebean")) {
-          continue;
-        }
-        if (!includeTransient && (Modifier.isTransient(f.getModifiers()) || f.getAnnotation(javax.persistence.Transient.class) != null)) {
-          continue;
-        }
-        Model.Property mp = buildProperty(f);
-        if (mp != null) {
-          properties.add(mp);
-        }
-      }
-      return properties;
-    }
-    
-    private Field keyField()
-    {
-      Class<?> c = modelClass;
-      try {
-        while (!c.equals(EbeanSupport.class)) {
-          for (Field field : c.getDeclaredFields()) {
-            if (field.isAnnotationPresent(Id.class)) {
-              field.setAccessible(true);
-              return field;
-            }
-          }
-          c = c.getSuperclass();
-        }
-      } catch (Exception e) {
-        throw new UnexpectedException("Error while determining the object @Id for an object of type " + modelClass);
-      }
-      throw new UnexpectedException("Cannot get the object @Id for an object of type " + modelClass);
-    }
-
-    Model.Property buildProperty(final Field field)
-    {
-      Model.Property modelProperty = new Model.Property();
-      modelProperty.type = field.getType();
-      modelProperty.field = field;
-      if (Model.class.isAssignableFrom(field.getType())) {
-        if (field.isAnnotationPresent(OneToOne.class)) {
-          if (field.getAnnotation(OneToOne.class).mappedBy().equals("")) {
-            modelProperty.isRelation = true;
-            modelProperty.relationType = field.getType();
-            modelProperty.choices = new Model.Choices() {
-
-              @SuppressWarnings("unchecked")
-              public List<Object> list()
-              {
-                List<?> result = (List<?>) EbeanContext.server().find(field.getType()).findList();
-                return (List<Object>) result;
-              }
-            };
-          }
-        }
-        if (field.isAnnotationPresent(ManyToOne.class)) {
-          modelProperty.isRelation = true;
-          modelProperty.relationType = field.getType();
-          modelProperty.choices = new Model.Choices() {
-
-            @SuppressWarnings("unchecked")
-            public List<Object> list()
-            {
-              List<?> result = (List<?>) EbeanContext.server().find(field.getType()).findList();
-              return (List<Object>) result;
-            }
-          };
-        }
-      }
-      if (Collection.class.isAssignableFrom(field.getType())) {
-        final Class<?> fieldType = (Class<?>) ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
-        if (field.isAnnotationPresent(OneToMany.class)) {
-          if (field.getAnnotation(OneToMany.class).mappedBy().equals("")) {
-            modelProperty.isRelation = true;
-            modelProperty.isMultiple = true;
-            modelProperty.relationType = fieldType;
-            modelProperty.choices = new Model.Choices() {
-
-              @SuppressWarnings("unchecked")
-              public List<Object> list()
-              {
-                List<?> result = (List<?>) EbeanContext.server().find(fieldType).findList();
-                return (List<Object>) result;
-              }
-            };
-          }
-        }
-        if (field.isAnnotationPresent(ManyToMany.class)) {
-          if (field.getAnnotation(ManyToMany.class).mappedBy().equals("")) {
-            modelProperty.isRelation = true;
-            modelProperty.isMultiple = true;
-            modelProperty.relationType = fieldType;
-            modelProperty.choices = new Model.Choices() {
-
-              @SuppressWarnings("unchecked")
-              public List<Object> list()
-              {
-                List<?> result = (List<?>) EbeanContext.server().find(fieldType).findList();
-                return (List<Object>) result;
-              }
-            };
-          }
-        }
-      }
-      if (field.getType().isEnum()) {
-        modelProperty.choices = new Model.Choices() {
-
-          @SuppressWarnings("unchecked")
-          public List<Object> list()
-          {
-            return (List<Object>) Arrays.asList(field.getType().getEnumConstants());
-          }
-        };
-      }
-      modelProperty.name = field.getName();
-      if (field.getType().equals(String.class)) {
-        modelProperty.isSearchable = true;
-      }
-      if (field.isAnnotationPresent(GeneratedValue.class)) {
-        modelProperty.isGenerated = true;
-      }
-      return modelProperty;
-    }
-
-    String getSearchQuery(List<String> searchFields)
-    {
-      String q = "";
-      for (Model.Property property : listProperties(false)) {
-        if (property.isSearchable && (searchFields == null || searchFields.isEmpty() ? true : searchFields.contains(property.name))) {
-          if (!q.equals("")) {
-            q += " or ";
-          }
-          q += "lower(" + property.name + ") like :keywords";
-        }
-      }
-      return q;
     }
   }
 
